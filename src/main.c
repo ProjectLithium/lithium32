@@ -1,14 +1,14 @@
 #include <drivers/vga/tty.h>
+#include <drivers/x86/idt.h>
 #include <core/init.h>
 #include <std/stdio.h>
-#include <core/version.h>
 
 void main() {
     vga_clear();
-    print_version();
-    printf("Loading drivers...\n");
+    
     init_drivers();
-    printf("Drivers initialized!\n");
+
+    printf("Started!\n");
 
     while (1);
 }

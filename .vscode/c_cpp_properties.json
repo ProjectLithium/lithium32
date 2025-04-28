@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/src",
-                "${workspaceFolder}/toolchain/i686-elf/lib/gcc/i686-elf/11.1.0/include"
+                "${workspaceFolder}/toolchain/i686-elf/lib/gcc/i686-elf/14.1.0/include"
             ],
             "defines": [
             ],

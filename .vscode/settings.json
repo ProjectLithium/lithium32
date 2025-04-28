@@ -2,6 +2,7 @@
     "files.associations": {
         "vga.h": "c",
         "stdio.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "gdt.h": "c"
     }
 }

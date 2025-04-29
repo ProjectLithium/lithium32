@@ -13,13 +13,16 @@ void timer_handler(regdump* regs)
 
 void main() {
     vga_clear();
+    tty_init();
     
     init_drivers();
 
     irq_register_handler(0, timer_handler);
     keyboard_init();
 
-    printf("Welcome!\n");
+    printf("Welcome to LithiumOS!\nEnter text: ");
+    char* text = scan();
+    printf("Text: %s", text);
 
     while (1);
 }

@@ -1,4 +1,5 @@
 #include "stdio.h"
+#include "string.h"
 #include <drivers/vga/tty.h>
 #include <drivers/devices/keyboard/keyboard.h>
 #include <stdint.h>
@@ -8,6 +9,28 @@
 
 int screenX = 0, screenY = 0;
 int lastLineEndX[25];
+
+static char buffer[256];
+
+#define SC_MAX 57
+
+const char *sc_name[] = {
+  "ERROR", "Esc", "1", "2", "3", "4", "5", "6", "7", "8",
+  "9", "0", "-", "=", "Backspace", "Tab", "Q", "W", "E", "R",
+  "T", "Y", "U", "I", "O", "P", "[", "]", "Enter", "Lctrl",
+  "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'",
+  "`", "LShift", "\\", "Z", "X", "C", "V", "B", "N", "M",
+  ",", ".", "/", "RShift", "Keypad *", "LAlt", "Spacebar"
+};
+
+const char sc_ascii[] = {
+  '?', '?', '1', '2', '3', '4', '5', '6', '7', '8',
+  '9', '0', '-', '=', '?', '?', 'q', 'w', 'e', 'r',
+  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '?', '?',
+  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
+  '\'', '`', '?', '\\', 'z', 'x', 'c', 'v', 'b', 'n',
+  'm', ',', '.', '/', '?', '?', '?', ' '
+};
 
 void tty_init()
 {
@@ -248,4 +271,48 @@ void print_buffer(const char* msg, const void* buffer, uint32_t count)
         putc(g_HexChars[u8Buffer[i] & 0xF]);
     }
     puts("\n");
+}
+
+char* scan() {
+    // Clear buffer
+    for (int i = 0; i < 256; i++) {
+        buffer[i] = '\0';
+    }
+
+    int index = 0;
+    bool key_pressed = false;
+    int startX = screenX;
+    int startY = screenY;
+
+    while(true) {
+        int key = keyboard_get_key();
+        
+        if (key != -1) {
+            if (!key_pressed) {  // Only process on new key press
+                key_pressed = true;
+                
+                if (key == BACKSPACE) {
+                    if (index > 0 && screenX > startX) {
+                        index--;
+                        buffer[index] = '\0';
+                        putb();
+                    }
+                } 
+                else if (key == ENTER) {
+                    putc('\n');
+                    buffer[index] = '\0';
+                    break;
+                } 
+                else if (key >= 0) {
+                    if (index < 255) {
+                        buffer[index++] = sc_ascii[key];
+                        putc(sc_ascii[key]);
+                    }
+                }
+            }
+        } else {
+            key_pressed = false;  // Reset when key is released
+        }
+    }
+    return buffer;
 }

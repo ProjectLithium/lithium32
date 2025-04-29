@@ -1,25 +1,37 @@
 #include "stdio.h"
 #include <drivers/vga/tty.h>
+#include <drivers/devices/keyboard/keyboard.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdbool.h>
 
 int screenX = 0, screenY = 0;
+int lastLineEndX[25];
+
+void tty_init()
+{
+    for (int i = 0; i < 25; i++)
+        lastLineEndX[i] = -1;
+}
 
 void putc(char c)
 {
     switch (c)
     {
         case '\n':
+            if (screenX > 0)
+                lastLineEndX[screenY] = screenX - 1;
+            else
+                lastLineEndX[screenY] = -1;
             screenX = 0;
             screenY++;
             break;
-    
+
         case '\t':
             for (int i = 0; i < 4 - (screenX % 4); i++)
                 putc(' ');
-            break;
+            return;
 
         case '\r':
             screenX = 0;
@@ -33,19 +45,41 @@ void putc(char c)
 
     if (screenX >= 80)
     {
+        lastLineEndX[screenY] = 79;
         screenY++;
         screenX = 0;
     }
+
+    if (screenY >= 25) {
+        screenY = 24; // Stay within bounds
+        // Consider scrolling here
+    }
+
     vga_set_cursor_pos(screenX, screenY);
 }
 
 void puts(const char* str)
 {
     while(*str)
-    {
-        putc(*str);
-        str++;
+        putc(*str++);
+}
+
+void putb()
+{
+    if (screenX > 0) {
+        screenX--;
+    } else if (screenY > 0) {
+        screenY--;
+        if (lastLineEndX[screenY] != -1)
+            screenX = lastLineEndX[screenY] + 1;
+        else
+            screenX = 0;
+    } else {
+        return; // Top-left corner
     }
+
+    vga_putc(' ', screenX, screenY, VGA_FG_LIGHT_GRAY | VGA_BG_BLACK);
+    vga_set_cursor_pos(screenX, screenY);
 }
 
 const char g_HexChars[] = "0123456789abcdef";
@@ -55,7 +89,6 @@ void printf_unsigned(unsigned long long number, int radix)
     char buffer[32];
     int pos = 0;
 
-    // convert number to ASCII
     do 
     {
         unsigned long long rem = number % radix;
@@ -63,7 +96,6 @@ void printf_unsigned(unsigned long long number, int radix)
         buffer[pos++] = g_HexChars[rem];
     } while (number > 0);
 
-    // print number in reverse order
     while (--pos >= 0)
         putc(buffer[pos]);
 }
@@ -150,33 +182,19 @@ void printf(const char* fmt, ...)
             PRINTF_STATE_SPEC_:
                 switch (*fmt)
                 {
-                    case 'c':   putc((char)va_arg(args, int));
-                                break;
-
-                    case 's':   
-                                puts(va_arg(args, const char*));
-                                break;
-
-                    case '%':   putc('%');
-                                break;
+                    case 'c':   putc((char)va_arg(args, int)); break;
+                    case 's':   puts(va_arg(args, const char*)); break;
+                    case '%':   putc('%'); break;
 
                     case 'd':
-                    case 'i':   radix = 10; sign = true; number = true;
-                                break;
-
-                    case 'u':   radix = 10; sign = false; number = true;
-                                break;
-
-                    case 'X':
+                    case 'i':   radix = 10; sign = true; number = true; break;
+                    case 'u':   radix = 10; sign = false; number = true; break;
                     case 'x':
-                    case 'p':   radix = 16; sign = false; number = true;
-                                break;
+                    case 'X':
+                    case 'p':   radix = 16; sign = false; number = true; break;
+                    case 'o':   radix = 8; sign = false; number = true; break;
 
-                    case 'o':   radix = 8; sign = false; number = true;
-                                break;
-
-                    // ignore invalid spec
-                    default:    break;
+                    default: break;
                 }
 
                 if (number)
@@ -187,14 +205,9 @@ void printf(const char* fmt, ...)
                         {
                         case PRINTF_LENGTH_SHORT_SHORT:
                         case PRINTF_LENGTH_SHORT:
-                        case PRINTF_LENGTH_DEFAULT:     printf_signed(va_arg(args, int), radix);
-                                                        break;
-
-                        case PRINTF_LENGTH_LONG:        printf_signed(va_arg(args, long), radix);
-                                                        break;
-
-                        case PRINTF_LENGTH_LONG_LONG:   printf_signed(va_arg(args, long long), radix);
-                                                        break;
+                        case PRINTF_LENGTH_DEFAULT:     printf_signed(va_arg(args, int), radix); break;
+                        case PRINTF_LENGTH_LONG:        printf_signed(va_arg(args, long), radix); break;
+                        case PRINTF_LENGTH_LONG_LONG:   printf_signed(va_arg(args, long long), radix); break;
                         }
                     }
                     else
@@ -203,24 +216,18 @@ void printf(const char* fmt, ...)
                         {
                         case PRINTF_LENGTH_SHORT_SHORT:
                         case PRINTF_LENGTH_SHORT:
-                        case PRINTF_LENGTH_DEFAULT:     printf_unsigned(va_arg(args, unsigned int), radix);
-                                                        break;
-                                                        
-                        case PRINTF_LENGTH_LONG:        printf_unsigned(va_arg(args, unsigned  long), radix);
-                                                        break;
-
-                        case PRINTF_LENGTH_LONG_LONG:   printf_unsigned(va_arg(args, unsigned  long long), radix);
-                                                        break;
+                        case PRINTF_LENGTH_DEFAULT:     printf_unsigned(va_arg(args, unsigned int), radix); break;
+                        case PRINTF_LENGTH_LONG:        printf_unsigned(va_arg(args, unsigned long), radix); break;
+                        case PRINTF_LENGTH_LONG_LONG:   printf_unsigned(va_arg(args, unsigned long long), radix); break;
                         }
                     }
                 }
 
-                // reset state
                 state = PRINTF_STATE_NORMAL;
                 length = PRINTF_LENGTH_DEFAULT;
                 radix = 10;
                 sign = false;
-                number = 0;
+                number = false;
                 break;
         }
 
@@ -235,7 +242,7 @@ void print_buffer(const char* msg, const void* buffer, uint32_t count)
     const uint8_t* u8Buffer = (const uint8_t*)buffer;
     
     puts(msg);
-    for (uint16_t i = 0; i < count; i++)
+    for (uint32_t i = 0; i < count; i++)
     {
         putc(g_HexChars[u8Buffer[i] >> 4]);
         putc(g_HexChars[u8Buffer[i] & 0xF]);

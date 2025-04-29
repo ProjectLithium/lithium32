@@ -4,6 +4,12 @@
         "stdio.h": "c",
         "stdint.h": "c",
         "gdt.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "keyboard.h": "c",
+        "string.h": "c",
+        "stdbool.h": "c",
+        "executor": "c",
+        "chrono": "c",
+        "functional": "c"
     }
 }

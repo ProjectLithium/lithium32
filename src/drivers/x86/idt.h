@@ -15,3 +15,5 @@
 #define IDT_FLAG_PRESENT        0x80
 
 void idt_install();
+void idt_enable_gate(int interrupt);
+void idt_disable_gate(int interrupt);

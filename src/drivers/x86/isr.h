@@ -12,4 +12,4 @@ typedef void (*isr_handler)(regdump* regs);
 
 void x86_isr_init_gates();
 void isr_install();
-void isr_register_handler(int interrupt);
+void isr_register_handler(int interrupt, isr_handler handler);

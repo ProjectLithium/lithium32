@@ -71,3 +71,9 @@ void isr_install()
         idt_enable_gate(i);
     }
 }
+
+void isr_register_handler(int interrupt, isr_handler handler)
+{
+    handlers[interrupt] = handler;
+    idt_enable_gate(interrupt);
+}

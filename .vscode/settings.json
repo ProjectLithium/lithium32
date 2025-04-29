@@ -3,6 +3,7 @@
         "vga.h": "c",
         "stdio.h": "c",
         "stdint.h": "c",
-        "gdt.h": "c"
+        "gdt.h": "c",
+        "stddef.h": "c"
     }
 }

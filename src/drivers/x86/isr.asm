@@ -20,28 +20,28 @@ x86_isr%1:
 %include "drivers/x86/isrs.inc"
 
 isr_common:
-    pusha
+    pusha               ; pushes in order: eax, ecx, edx, ebx, esp, ebp, esi, edi
 
-    xor eax, eax
+    xor eax, eax        ; push ds
     mov ax, ds
     push eax
 
-    mov ax, 0x10
+    mov ax, 0x10        ; use kernel data segment
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
-
-    push esp
+    
+    push esp            ; pass pointer to stack to C, so we can access all the pushed information
     call x86_isr_handler
     add esp, 4
 
-    pop eax
+    pop eax             ; restore old segment
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
 
-    popa
-    add esp, 8
-    iret
+    popa                ; pop what we pushed with pusha
+    add esp, 8          ; remove error code and interrupt number
+    iret                ; will pop: cs, eip, eflags, ss, esp

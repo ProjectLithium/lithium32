@@ -2,12 +2,12 @@
 
 typedef struct
 {
-    uint16_t limit_low;     // Lower 16 bits of segment limit
-    uint16_t base_low;      // Lower 16 bits of base address
-    uint8_t  base_middle;   // Next 8 bits of base address
-    uint8_t  access;        // Access flags
-    uint8_t  granularity;   // Granularity + upper 4 bits of limit
-    uint8_t  base_high;     // Last 8 bits of base address
+    uint16_t limit_low;                  // limit (bits 0-15)
+    uint16_t base_low;                   // base (bits 0-15)
+    uint8_t base_middle;                 // base (bits 16-23)
+    uint8_t access;                     // access
+    uint8_t flags_limit_hi;               // limit (bits 16-19) | flags
+    uint8_t base_high;                   // base (bits 24-31)
 } __attribute__((packed)) gdt_entry;
 
 typedef struct
@@ -16,76 +16,72 @@ typedef struct
     gdt_entry* entry_ptr;
 } __attribute__((packed)) gdt_descriptor;
 
-#define SEG_DATA_RD        0x00 // Read-Only
-#define SEG_DATA_RDA       0x01 // Read-Only, accessed
-#define SEG_DATA_RDWR      0x02 // Read/Write
-#define SEG_DATA_RDWRA     0x03 // Read/Write, accessed
-#define SEG_DATA_RDEXPD    0x04 // Read-Only, expand-down
-#define SEG_DATA_RDEXPDA   0x05 // Read-Only, expand-down, accessed
-#define SEG_DATA_RDWREXPD  0x06 // Read/Write, expand-down
-#define SEG_DATA_RDWREXPDA 0x07 // Read/Write, expand-down, accessed
-#define SEG_CODE_EX        0x08 // Execute-Only
-#define SEG_CODE_EXA       0x09 // Execute-Only, accessed
-#define SEG_CODE_EXRD      0x0A // Execute/Read
-#define SEG_CODE_EXRDA     0x0B // Execute/Read, accessed
-#define SEG_CODE_EXC       0x0C // Execute-Only, conforming
-#define SEG_CODE_EXCA      0x0D // Execute-Only, conforming, accessed
-#define SEG_CODE_EXRDC     0x0E // Execute/Read, conforming
-#define SEG_CODE_EXRDCA    0x0F // Execute/Read, conforming, accessed
+typedef enum
+{
+    GDT_ACCESS_CODE_READABLE                = 0x02,
+    GDT_ACCESS_DATA_WRITEABLE               = 0x02,
 
-#define SEG_DESCTYPE(x)  ((x) << 0x04) // Descriptor type (0 for system, 1 for code/data)
-#define SEG_PRES(x)      ((x) << 0x07) // Present
-#define SEG_SAVL(x)      ((x) << 0x0C) // Available for system use
-#define SEG_LONG(x)      ((x) << 0x0D) // Long mode
-#define SEG_SIZE(x)      ((x) << 0x0E) // Size (0 for 16-bit, 1 for 32)
-#define SEG_GRAN(x)      ((x) << 0x0F) // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
-#define SEG_PRIV(x)     (((x) &  0x03) << 0x05)   // Set privilege level (0 - 3)
+    GDT_ACCESS_CODE_CONFORMING              = 0x04,
+    GDT_ACCESS_DATA_DIRECTION_NORMAL        = 0x00,
+    GDT_ACCESS_DATA_DIRECTION_DOWN          = 0x04,
 
- 
-#define GDT_CODE_PL0 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
-                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
-                     SEG_PRIV(0)     | SEG_CODE_EXRD
- 
-#define GDT_DATA_PL0 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
-                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
-                     SEG_PRIV(0)     | SEG_DATA_RDWR
- 
-#define GDT_CODE_PL3 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
-                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
-                     SEG_PRIV(3)     | SEG_CODE_EXRD
- 
-#define GDT_DATA_PL3 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
-                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
-                     SEG_PRIV(3)     | SEG_DATA_RDWR
+    GDT_ACCESS_DATA_SEGMENT                 = 0x10,
+    GDT_ACCESS_CODE_SEGMENT                 = 0x18,
 
-extern uint32_t tss; // TSS структура где-то объявлена
+    GDT_ACCESS_DESCRIPTOR_TSS               = 0x00,
+
+    GDT_ACCESS_RING0                        = 0x00,
+    GDT_ACCESS_RING1                        = 0x20,
+    GDT_ACCESS_RING2                        = 0x40,
+    GDT_ACCESS_RING3                        = 0x60,
+
+    GDT_ACCESS_PRESENT                      = 0x80,
+
+} GDT_ACCESS;
+
+typedef enum 
+{
+    GDT_FLAG_64BIT                          = 0x20,
+    GDT_FLAG_32BIT                          = 0x40,
+    GDT_FLAG_16BIT                          = 0x00,
+
+    GDT_FLAG_GRANULARITY_1B                 = 0x00,
+    GDT_FLAG_GRANULARITY_4K                 = 0x80,
+} GDT_FLAGS;
+
+// Helper macros
+#define GDT_LIMIT_LOW(limit)                (limit & 0xFFFF)
+#define GDT_BASE_LOW(base)                  (base & 0xFFFF)
+#define GDT_BASE_MIDDLE(base)               ((base >> 16) & 0xFF)
+#define GDT_FLAGS_LIMIT_HI(limit, flags)    (((limit >> 16) & 0xF) | (flags & 0xF0))
+#define GDT_BASE_HIGH(base)                 ((base >> 24) & 0xFF)
+
+#define GDT_ENTRY(base, limit, access, flags) {                     \
+    GDT_LIMIT_LOW(limit),                                           \
+    GDT_BASE_LOW(base),                                             \
+    GDT_BASE_MIDDLE(base),                                          \
+    access,                                                         \
+    GDT_FLAGS_LIMIT_HI(limit, flags),                               \
+    GDT_BASE_HIGH(base)                                             \
+}
 
 gdt_entry gdt[] = {
-    // NULL descriptor
-    {0, 0, 0, 0, 0, 0},
+    GDT_ENTRY(0, 0, 0, 0),
 
-    // Kernel Code Segment
-    {
-        .limit_low    = 0xFFFF,
-        .base_low     = 0x0000,
-        .base_middle  = 0x00,
-        .access       = 0x9A,
-        .granularity  = 0xCF, // limit high nibble | G=1, D=1
-        .base_high    = 0x00,
-    },
+    // Kernel 32-bit code segment
+    GDT_ENTRY(0,
+              0xFFFFF,
+              GDT_ACCESS_PRESENT | GDT_ACCESS_RING0 | GDT_ACCESS_CODE_SEGMENT | GDT_ACCESS_CODE_READABLE,
+              GDT_FLAG_32BIT | GDT_FLAG_GRANULARITY_4K),
 
-    // Kernel Data Segment
-    {
-        .limit_low    = 0xFFFF,
-        .base_low     = 0x0000,
-        .base_middle  = 0x00,
-        .access       = 0x92,
-        .granularity  = 0xCF,
-        .base_high    = 0x00,
-    }
+    // Kernel 32-bit data segment
+    GDT_ENTRY(0,
+              0xFFFFF,
+              GDT_ACCESS_PRESENT | GDT_ACCESS_RING0 | GDT_ACCESS_DATA_SEGMENT | GDT_ACCESS_DATA_WRITEABLE,
+              GDT_FLAG_32BIT | GDT_FLAG_GRANULARITY_4K),
 };
      
-gdt_descriptor descriptor = {sizeof(gdt) - 1, &gdt};
+gdt_descriptor descriptor = {sizeof(gdt) - 1, gdt};
 
 void __attribute__((cdecl)) x86_load_gdt(gdt_descriptor* descriptor_ptr, uint16_t codeSeg, uint16_t dataSeg);
 

@@ -5,24 +5,20 @@
 #include <drivers/io/io.h>
 #include <core/init.h>
 #include <std/stdio.h>
-
-void timer_handler(regdump* regs)
-{
-    // printf("."); do nothing, i hate this timer
-}
+#include <shell/shell.h>
+#include <drivers/devices/time/pit.h>
 
 void main() {
     vga_clear();
     tty_init();
     
     init_drivers();
-
-    irq_register_handler(0, timer_handler);
+    
+    pit_init();
     keyboard_init();
 
-    printf("Welcome to LithiumOS!\nEnter text: ");
-    char* text = scan();
-    printf("Text: %s", text);
+    printf("Welcome to LithiumOS!\n");
+    shell_run();
 
     while (1);
 }

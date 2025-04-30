@@ -38,6 +38,39 @@ void tty_init()
         lastLineEndX[i] = -1;
 }
 
+
+void scrollback(int lines)
+{
+    // Move lines up
+    for (int y = 0; y < 25 - lines; y++) {
+        for (int x = 0; x < 80; x++) {
+            uint8_t ch = vga_getc(x, y + lines);
+            vga_putc(ch, x, y, VGA_FG_LIGHT_GRAY | VGA_BG_BLACK);
+        }
+        lastLineEndX[y] = lastLineEndX[y + lines];  // shift lastLineEndX up too
+    }
+
+    // Clear the last `lines` lines
+    for (int y = 25 - lines; y < 25; y++) {
+        for (int x = 0; x < 80; x++) {
+            vga_putc(' ', x, y, VGA_FG_LIGHT_GRAY | VGA_BG_BLACK);
+        }
+        lastLineEndX[y] = -1;
+    }
+
+    screenY = 25 - 1;  // stay on the last line
+    screenX = 0;
+    vga_set_cursor_pos(screenX, screenY);
+}
+
+void clear()
+{
+    vga_clear();
+    screenX = 0;
+    screenY = 0;
+    vga_set_cursor_pos(screenX, screenY);
+}
+
 void putc(char c)
 {
     switch (c)
@@ -74,8 +107,7 @@ void putc(char c)
     }
 
     if (screenY >= 25) {
-        screenY = 24; // Stay within bounds
-        // Consider scrolling here
+        scrollback(1);
     }
 
     vga_set_cursor_pos(screenX, screenY);

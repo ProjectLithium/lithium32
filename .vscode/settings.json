@@ -10,6 +10,8 @@
         "stdbool.h": "c",
         "executor": "c",
         "chrono": "c",
-        "functional": "c"
+        "functional": "c",
+        "pit.h": "c",
+        "*.x": "c"
     }
 }

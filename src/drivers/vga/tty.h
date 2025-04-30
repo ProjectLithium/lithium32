@@ -33,3 +33,4 @@
 void vga_clear();
 void vga_putc(char c, uint8_t x, uint8_t y, uint8_t color);
 void vga_set_cursor_pos(uint8_t x, uint8_t y);
+char vga_getc(uint8_t x, uint8_t y);

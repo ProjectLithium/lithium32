@@ -8,3 +8,4 @@ void putb();
 void printf(const char* fmt, ...);
 void print_buffer(const char* msg, const void* buffer, uint32_t count);
 char* scan();
+void clear();

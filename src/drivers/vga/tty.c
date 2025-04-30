@@ -35,3 +35,10 @@ void vga_set_cursor_pos(uint8_t x, uint8_t y)
     x86_outb(0x3D4, 0x0E);  // Выбираем регистр высокого байта
     x86_outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));
 }
+
+char vga_getc(uint8_t x, uint8_t y)
+{
+    uint16_t *vram = (uint16_t*) 0xb8000;
+    uint16_t pos = y * 80 + x;
+    return (char)(vram[pos] & 0x00FF); // Return only the character
+}

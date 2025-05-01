@@ -4,6 +4,7 @@
 #include <drivers/devices/time/pit.h>
 #include <drivers/devices/time/rtc.h>
 #include <drivers/io/cpuid.h>
+#include <memory/detection.h>
 #include "util.h"
 
 const char* ascii_art[] = {
@@ -61,16 +62,19 @@ uint8_t handle_command(char* cmd)
             time.day, months[time.month - 1], time.year, time.hours, time.minutes, time.seconds);
     } else if (strcmp(command, "slobodafetch")) {
         char* cpu_name = cpuid_get_cpu_name();
+        char* ram_size = str_join(int_to_string(memory_get_ram_size() / 1000 / 1000), " MB");
         const char* info_prefixes[] = {
             "OS: ",
             "Shell: ",
             "CPU: ",
+            "RAM: ",
             NULL
         };
         const char* info[] = {
             "LithiumOS x86_32",
             "LithiumOS built-in shell v0.0.1",
             cpu_name,
+            ram_size,
             NULL
         };
         printf("\n");

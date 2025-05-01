@@ -19,7 +19,7 @@ always:
 	@mkdir -p $(BUILD_DIR)/asm
 
 run: all
-	@qemu-system-x86_64 -cdrom lithium.iso
+	@qemu-system-x86_64 -cdrom lithium.iso -m 4M --enable-kvm
 
 clean:
 	@rm -rf $(BUILD_DIR)/*

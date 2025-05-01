@@ -3,6 +3,8 @@
 #include <drivers/x86/idt.h>
 #include <drivers/x86/isr.h>
 #include <drivers/devices/irq.h>
+#include <drivers/devices/time/pit.h>
+#include <drivers/devices/keyboard/keyboard.h>
 
 void init_drivers()
 {
@@ -10,5 +12,9 @@ void init_drivers()
     idt_install();
     isr_install();
     irq_install();
+
+    // hardware part
+    pit_init();
+    keyboard_init();
     return;
 }

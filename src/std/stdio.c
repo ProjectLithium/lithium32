@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <memory/memory.h>
 
 int screenX = 0, screenY = 0;
 int lastLineEndX[25];
@@ -307,9 +308,7 @@ void print_buffer(const char* msg, const void* buffer, uint32_t count)
 
 char* scan() {
     // Clear buffer
-    for (int i = 0; i < 256; i++) {
-        buffer[i] = '\0';
-    }
+    memset(buffer, 0, sizeof(buffer));
 
     int index = 0;
     bool key_pressed = false;
